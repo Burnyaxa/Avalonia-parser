@@ -11,11 +11,10 @@ namespace AvaloniaParser.Parsers
 {
     public class GenieParser : IParser
     {
-        //private const string ListXPath = "//*[@id=\"body-content\"]/div[6]/div/table/tbody";
         private const string ListXPath = "//tbody";
-        private const string NameXPath = "td[5]/a[1]";
-        private const string ArtistXPath = "td[5]/a[2]";
-        private const string AlbumXPath = "td[5]/a[3]";
+        private const string NameXPath = "td/a[@class=\"title ellipsis\"]";
+        private const string ArtistXPath = "td/a[@class=\"artist ellipsis\"]";
+        private const string AlbumXPath = "td/a[@class=\"albumtitle ellipsis\"]";
         public List<SongModel> Parse(string url)
         {
             List<SongModel> list = new List<SongModel>();
@@ -33,27 +32,33 @@ namespace AvaloniaParser.Parsers
 
             Parallel.ForEach(nodes,
                 node =>
-                { 
+                {
+                    var nameNode = node.SelectSingleNode(NameXPath);
+                    var name = ConvertNode(nameNode);
+                    var albumNode = node.SelectSingleNode(AlbumXPath);
+                    var album = ConvertNode(albumNode);
+                    var artistNode = node.SelectSingleNode(ArtistXPath);
+                    var artist = ConvertNode(artistNode);
+                    
                     list.Add(new SongModel()
                     {
-                        Name = node.SelectSingleNode(NameXPath).InnerText
-                            .Replace(Environment.NewLine, string.Empty)
-                            .Replace("\t", string.Empty)
-                            .Replace("&amp;", "&")
-                            .Trim(),
-                        Album = node.SelectSingleNode(AlbumXPath).InnerText
-                            .Replace(Environment.NewLine, string.Empty)
-                            .Replace("\t", string.Empty)
-                            .Replace("&amp;", "&"),
-                        Artist = node.SelectSingleNode(ArtistXPath).InnerText
-                            .Replace(Environment.NewLine, string.Empty)
-                            .Replace("\t", string.Empty)
-                            .Replace("&amp;", "&"),
+                        Name = name,
+                        Album = album,
+                        Artist = artist,
                         Duration = string.Empty
                     });
                 });
             
             return list;
+        }
+
+        private string ConvertNode(HtmlNode node)
+        {
+            return node is null ? string.Empty : node.InnerText
+                .Replace(Environment.NewLine, string.Empty)
+                .Replace("\t", string.Empty)
+                .Replace("&amp;", "&")
+                .Trim();
         }
     }
 }

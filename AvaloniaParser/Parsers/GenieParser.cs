@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AvaloniaParser.Interfaces;
 using AvaloniaParser.Models;
+using DynamicData;
 using HtmlAgilityPack;
 using OpenQA.Selenium.Chrome;
 
@@ -17,7 +18,6 @@ namespace AvaloniaParser.Parsers
         private const string AlbumXPath = "td/a[@class=\"albumtitle ellipsis\"]";
         public List<SongModel> Parse(string url)
         {
-            List<SongModel> list = new List<SongModel>();
             var chromeOptions = new ChromeOptions();
             chromeOptions.AddArguments(new List<string>() {"headless", "disable-gpu" });
             using var browser = new ChromeDriver(chromeOptions);
@@ -28,28 +28,27 @@ namespace AvaloniaParser.Parsers
             var doc = new HtmlDocument();
             doc.LoadHtml(results.GetAttribute("innerHTML"));
             
+            var hoverListNode = doc.DocumentNode.SelectSingleNode("//tr[@class='list hover']");
             var nodes = doc.DocumentNode.SelectNodes("//tr[@class='list']");
-
-            Parallel.ForEach(nodes,
-                node =>
-                {
-                    var nameNode = node.SelectSingleNode(NameXPath);
-                    var name = ConvertNode(nameNode);
-                    var albumNode = node.SelectSingleNode(AlbumXPath);
-                    var album = ConvertNode(albumNode);
-                    var artistNode = node.SelectSingleNode(ArtistXPath);
-                    var artist = ConvertNode(artistNode);
-                    
-                    list.Add(new SongModel()
-                    {
-                        Name = name,
-                        Album = album,
-                        Artist = artist,
-                        Duration = string.Empty
-                    });
-                });
             
-            return list;
+            if (hoverListNode != null)
+            {
+                nodes.Insert(0, hoverListNode);
+            }
+
+            return (from node in nodes let nameNode = node.SelectSingleNode(NameXPath)
+                let name = ConvertNode(nameNode)
+                let albumNode = node.SelectSingleNode(AlbumXPath)
+                let album = ConvertNode(albumNode)
+                let artistNode = node.SelectSingleNode(ArtistXPath)
+                let artist = ConvertNode(artistNode)
+                select new SongModel()
+                {
+                    Name = name,
+                    Album = album,
+                    Artist = artist,
+                    Duration = string.Empty
+                }).ToList();
         }
 
         private string ConvertNode(HtmlNode node)
